@@ -182,7 +182,7 @@ const categories = {
 const STATUS_UI = {
   novo: { 
     label: "Recebido", 
-    message: "Aguardando o restaurante.", 
+    message: "Seu pagamento foi confirmado! A cozinha já vai começar.", 
     icon: Check, 
     color: "text-blue-600", 
     bg: "bg-blue-100",
@@ -198,7 +198,7 @@ const STATUS_UI = {
   },
   pronto: { 
     label: "Saiu para Entrega", 
-    message: "Seu pedido está a caminho!", 
+    message: "Seu pedido está a caminho da sua casa.", 
     icon: Bike, 
     color: "text-indigo-600", 
     bg: "bg-indigo-100",
@@ -626,25 +626,42 @@ export default function App() {
 
   const LoyaltyCard = () => {
     const giftsEarned = Math.floor(loyaltyProgress / LOYALTY_GOAL);
-    const percentage = (progressCurrent / LOYALTY_GOAL) * 100;
     const progressCurrent = loyaltyProgress % LOYALTY_GOAL;
+    const percentage = (progressCurrent / LOYALTY_GOAL) * 100;
 
     return (
       <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 text-white shadow-xl shadow-indigo-200 mb-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 opacity-10"><Gift className="w-48 h-48 -mr-10 -mt-10" /></div>
+        
         <div className="relative z-10">
           <div className="flex justify-between items-start mb-4">
             <div>
               <h3 className="text-xl font-bold flex items-center gap-2"><Star className="w-5 h-5 text-yellow-300 fill-current"/> Clube Doce Fidelidade</h3>
               <p className="text-indigo-100 text-sm">Peça {LOYALTY_GOAL} vezes e ganhe um brinde!</p>
             </div>
-            <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold border border-white/30">{loyaltyProgress} Pedidos</div>
+            <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold border border-white/30">
+              {loyaltyProgress} Pedidos Totais
+            </div>
           </div>
+
           <div className="bg-black/20 rounded-full h-4 w-full mb-2 overflow-hidden border border-white/10">
             <div className="bg-gradient-to-r from-yellow-300 to-amber-500 h-full transition-all duration-1000" style={{ width: `${percentage}%` }}></div>
           </div>
-          <div className="flex justify-between text-xs font-bold text-indigo-100 mb-4"><span>0</span><span>{LOYALTY_GOAL} Pedidos</span></div>
-          {giftsEarned > 0 && <div className="bg-white text-indigo-900 p-3 rounded-xl flex items-center gap-3 shadow-lg animate-pulse"><Gift className="w-6 h-6 text-purple-600" /><div><p className="font-bold leading-tight">Você tem {giftsEarned} brinde(s) disponível(is)!</p></div></div>}
+          
+          <div className="flex justify-between text-xs font-bold text-indigo-100 mb-4">
+            <span>0</span>
+            <span>{LOYALTY_GOAL} Pedidos</span>
+          </div>
+
+          {giftsEarned > 0 && (
+            <div className="bg-white text-indigo-900 p-3 rounded-xl flex items-center gap-3 shadow-lg animate-pulse">
+              <Gift className="w-6 h-6 text-purple-600" />
+              <div>
+                <p className="font-bold leading-tight">Você tem {giftsEarned} brinde(s) disponível(is)!</p>
+                <p className="text-xs text-indigo-700">Solicite na observação do próximo pedido.</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -652,10 +669,38 @@ export default function App() {
 
   const ProductCard = ({ product }) => (
     <div className="group bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col h-full">
-      <div className="h-48 overflow-hidden relative bg-gray-100"><img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" /><div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div><div className="absolute top-3 left-3"><span className="px-3 py-1 rounded-full bg-white/95 backdrop-blur-sm text-[10px] font-extrabold text-amber-800 shadow-sm uppercase tracking-wider border border-white/50">{categories[product.category]}</span></div></div>
+      <div className="h-48 overflow-hidden relative bg-gray-100">
+        <img 
+          src={product.imageUrl} 
+          alt={product.name} 
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <div className="absolute top-3 left-3">
+          <span className="px-3 py-1 rounded-full bg-white/95 backdrop-blur-sm text-[10px] font-extrabold text-amber-800 shadow-sm uppercase tracking-wider border border-white/50">
+            {categories[product.category]}
+          </span>
+        </div>
+      </div>
+      
       <div className="p-5 flex flex-col flex-grow">
-        <div className="flex-grow"><h3 className="text-lg font-bold text-gray-800 leading-tight mb-2 group-hover:text-amber-700 transition-colors">{product.name}</h3><p className="text-sm text-gray-500 line-clamp-2 leading-relaxed">{product.description}</p></div>
-        <div className="mt-5 pt-4 border-t border-dashed border-gray-100 flex justify-between items-center"><div className="flex flex-col"><span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">A partir de</span><span className="font-extrabold text-amber-600 text-xl">{formatBR(product.price)}</span></div><button onClick={() => product.id === ACAI_ID ? setAcaiModalProduct(product) : addToCart(product)} className="w-10 h-10 rounded-full bg-amber-600 text-white flex items-center justify-center shadow-lg shadow-amber-600/20 hover:bg-amber-700 hover:scale-105 hover:shadow-amber-600/40 active:scale-95 transition-all duration-300"><Plus className="w-5 h-5" /></button></div>
+        <div className="flex-grow">
+          <h3 className="text-lg font-bold text-gray-800 leading-tight mb-2 group-hover:text-amber-700 transition-colors">{product.name}</h3>
+          <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed">{product.description}</p>
+        </div>
+        
+        <div className="mt-5 pt-4 border-t border-dashed border-gray-100 flex justify-between items-center">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">A partir de</span>
+            <span className="font-extrabold text-amber-600 text-xl">{formatBR(product.price)}</span>
+          </div>
+          <button 
+            onClick={() => product.id === ACAI_ID ? setAcaiModalProduct(product) : addToCart(product)}
+            className="w-10 h-10 rounded-full bg-amber-600 text-white flex items-center justify-center shadow-lg shadow-amber-600/20 hover:bg-amber-700 hover:scale-105 hover:shadow-amber-600/40 active:scale-95 transition-all duration-300"
+          >
+            <Plus className="w-5 h-5" />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -666,12 +711,66 @@ export default function App() {
     const toggle = (name) => setSelected(p => p.includes(name) ? p.filter(x => x !== name) : [...p, name]);
     const extraPrice = selected.reduce((acc, name) => acc + (ACAI_TOPPINGS.find(t => t.name === name)?.price || 0), 0);
     const finalPrice = acaiModalProduct.price + extraPrice;
+
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fadeIn">
         <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl scale-100 animate-slideUp">
-          <div className="p-5 border-b flex justify-between items-center bg-gradient-to-r from-purple-700 to-purple-900 text-white"><div className="flex items-center gap-2"><div className="bg-white/20 p-1.5 rounded-lg"><Star className="w-4 h-4 text-yellow-300 fill-current" /></div><h3 className="font-bold text-lg">Montar Açaí</h3></div><button onClick={() => setAcaiModalProduct(null)} className="p-1 hover:bg-white/10 rounded-full transition"><X className="w-5 h-5"/></button></div>
-          <div className="p-5 max-h-[50vh] overflow-y-auto custom-scrollbar">{ACAI_TOPPINGS.map(t => <div key={t.name} onClick={() => toggle(t.name)} className={`flex justify-between items-center p-3 rounded-xl border-2 cursor-pointer transition-all duration-200 ${selected.includes(t.name) ? 'border-purple-500 bg-purple-50 shadow-sm' : 'border-gray-100 hover:border-purple-200 bg-white'}`}><div className="flex items-center gap-3"><div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selected.includes(t.name) ? 'border-purple-600 bg-purple-600' : 'border-gray-300'}`}>{selected.includes(t.name) && <Check className="w-3 h-3 text-white" />}</div><span className={`text-sm font-medium ${selected.includes(t.name) ? 'text-purple-900' : 'text-gray-700'}`}>{t.name}</span></div><span className="text-xs text-gray-500 font-bold bg-white px-2 py-1 rounded-md shadow-sm border border-gray-100">+{formatBR(t.price)}</span></div>)}</div>
-          <div className="p-5 bg-gray-50 border-t border-gray-100"><button onClick={() => { addToCart({ ...acaiModalProduct, price: finalPrice, isCustom: true, uniqueId: Math.random().toString(36) }, 1, selected); setAcaiModalProduct(null); }} className="w-full bg-purple-700 text-white py-3.5 rounded-xl font-bold hover:bg-purple-800 transition shadow-lg shadow-purple-700/20 active:scale-[0.98]">Adicionar {formatBR(finalPrice)}</button></div>
+          <div className="p-5 border-b flex justify-between items-center bg-gradient-to-r from-purple-700 to-purple-900 text-white">
+            <div className="flex items-center gap-2">
+              <div className="bg-white/20 p-1.5 rounded-lg"><Star className="w-4 h-4 text-yellow-300 fill-current" /></div>
+              <h3 className="font-bold text-lg">Montar Açaí</h3>
+            </div>
+            <button onClick={() => setAcaiModalProduct(null)} className="p-1 hover:bg-white/10 rounded-full transition"><X className="w-5 h-5"/></button>
+          </div>
+          
+          <div className="p-5 max-h-[50vh] overflow-y-auto custom-scrollbar">
+            <div className="flex items-center justify-between mb-4">
+               <p className="text-sm font-medium text-gray-600">Escolha seus adicionais:</p>
+               <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold">{selected.length} selecionados</span>
+            </div>
+            <div className="grid grid-cols-1 gap-2">
+              {ACAI_TOPPINGS.map(t => {
+                const isSelected = selected.includes(t.name);
+                return (
+                  <div 
+                    key={t.name} 
+                    onClick={() => toggle(t.name)} 
+                    className={`flex justify-between items-center p-3 rounded-xl border-2 cursor-pointer transition-all duration-200 ${isSelected ? 'border-purple-500 bg-purple-50 shadow-sm' : 'border-gray-100 hover:border-purple-200 bg-white'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isSelected ? 'border-purple-600 bg-purple-600' : 'border-gray-300'}`}>
+                        {isSelected && <Check className="w-3 h-3 text-white" />}
+                      </div>
+                      <span className={`text-sm font-medium ${isSelected ? 'text-purple-900' : 'text-gray-700'}`}>{t.name}</span>
+                    </div>
+                    <span className="text-xs text-gray-500 font-bold bg-white px-2 py-1 rounded-md shadow-sm border border-gray-100">+{formatBR(t.price)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          
+          <div className="p-5 bg-gray-50 border-t border-gray-100">
+            <div className="flex justify-between items-end mb-4">
+              <div>
+                <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Valor Final</p>
+                <p className="text-2xl font-black text-purple-900">{formatBR(finalPrice)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-400">Base: {formatBR(ACAI_BASE_PRICE)}</p>
+                <p className="text-xs text-gray-400">Adicionais: {formatBR(extraPrice)}</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => {
+                addToCart({ ...acaiModalProduct, price: finalPrice, isCustom: true, uniqueId: Math.random().toString(36) }, 1, selected);
+                setAcaiModalProduct(null);
+              }}
+              className="w-full bg-purple-700 text-white py-3.5 rounded-xl font-bold hover:bg-purple-800 transition shadow-lg shadow-purple-700/20 active:scale-[0.98]"
+            >
+              Adicionar ao Carrinho
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -679,30 +778,300 @@ export default function App() {
 
   const PaymentModal = () => {
     if (!paymentModalOpen || !paymentData) return null;
+
+    // Se tiver copypaste, tenta usar. Se não, fallback
     const copyPasteCode = paymentData.pix?.copypaste || paymentData.pix?.payload || paymentData.copypaste; 
     const checkoutUrl = paymentData.url || paymentData.paymentUrl;
+    
+    // Determina se vamos usar iframe (quando tem URL mas não tem código Pix cru)
     const useIframe = !copyPasteCode && checkoutUrl;
-    const copyToClipboard = () => { if (copyPasteCode) { navigator.clipboard.writeText(copyPasteCode); alert("Código Pix copiado!"); } else if (checkoutUrl) { navigator.clipboard.writeText(checkoutUrl); alert("Link copiado!"); } };
+
+    const copyToClipboard = () => {
+      if (copyPasteCode) {
+        navigator.clipboard.writeText(copyPasteCode);
+        alert("Código Pix copiado!");
+      } else if (checkoutUrl) {
+         navigator.clipboard.writeText(checkoutUrl);
+         alert("Link de pagamento copiado!");
+      } else {
+        alert("Código não disponível para cópia.");
+      }
+    };
 
     return (
       <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fadeIn">
         <div className={`bg-white rounded-3xl w-full ${useIframe ? 'max-w-2xl h-[85vh]' : 'max-w-sm'} overflow-hidden shadow-2xl scale-100 animate-slideUp flex flex-col transition-all duration-300`}>
-          <div className="bg-green-600 p-4 text-center text-white relative flex-shrink-0"><h3 className="text-xl font-bold">Pagamento via Pix</h3>{!useIframe && <p className="text-green-100 text-sm">Escaneie ou copie o código</p>}<button onClick={() => setPaymentModalOpen(false)} className="absolute top-4 right-4 text-white/80 hover:text-white p-1 rounded-full hover:bg-white/10 transition"><X className="w-5 h-5"/></button></div>
+          
+          <div className="bg-green-600 p-4 text-center text-white relative flex-shrink-0">
+             <h3 className="text-xl font-bold">Pagamento via Pix</h3>
+             {!useIframe && <p className="text-green-100 text-sm">Escaneie ou copie o código</p>}
+             <button onClick={() => setPaymentModalOpen(false)} className="absolute top-4 right-4 text-white/80 hover:text-white p-1 rounded-full hover:bg-white/10 transition"><X className="w-5 h-5"/></button>
+          </div>
+
           <div className="flex-1 overflow-y-auto p-6 bg-gray-50 flex flex-col items-center justify-start">
-            {copyPasteCode && <div className="w-full flex flex-col items-center"><div className="w-64 h-64 bg-white rounded-xl flex items-center justify-center mb-6 border-2 border-dashed border-gray-300 p-2 shadow-sm"><img src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(copyPasteCode)}`} alt="QR Code Pix" className="w-full h-full object-contain" /></div><p className="text-2xl font-black text-gray-800 mb-6">{formatBR(finalTotal)}</p></div>}
-            {useIframe && <div className="w-full h-full min-h-[400px] bg-white rounded-xl overflow-hidden border border-gray-200 shadow-inner relative flex-grow mb-4"><iframe src={checkoutUrl} className="w-full h-full absolute inset-0" title="Pagamento AbacatePay" allow="payment"/></div>}
-            {!copyPasteCode && !useIframe && <div className="text-center p-10"><p className="text-gray-500 font-medium">Dados não carregaram.</p><p className="text-xs text-gray-400 mt-2">Use o link abaixo.</p></div>}
+            
+            {/* 1. MODO QR CODE NATIVO (Se tivermos o código cru) */}
+            {copyPasteCode && (
+                <div className="w-full flex flex-col items-center">
+                  <div className="w-64 h-64 bg-white rounded-xl flex items-center justify-center mb-6 border-2 border-dashed border-gray-300 p-2 shadow-sm">
+                    <img 
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(copyPasteCode)}`} 
+                        alt="QR Code Pix"
+                        className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <p className="text-2xl font-black text-gray-800 mb-6">{formatBR(finalTotal)}</p>
+                </div>
+            )}
+
+            {/* 2. MODO IFRAME (Se não tiver código, mas tiver URL) */}
+            {useIframe && (
+                <div className="w-full h-full min-h-[400px] bg-white rounded-xl overflow-hidden border border-gray-200 shadow-inner relative flex-grow mb-4">
+                    <iframe 
+                        src={checkoutUrl} 
+                        className="w-full h-full absolute inset-0"
+                        title="Pagamento AbacatePay"
+                        allow="payment"
+                    />
+                </div>
+            )}
+
+            {/* 3. FALLBACK (Se não tiver nada) */}
+            {!copyPasteCode && !useIframe && (
+                 <div className="text-center p-10">
+                   <p className="text-gray-500 font-medium">Os dados de pagamento não carregaram corretamente.</p>
+                   <p className="text-xs text-gray-400 mt-2">Tente clicar no link abaixo.</p>
+                 </div>
+            )}
+
             <div className="w-full space-y-3 mt-auto">
-              {copyPasteCode && <button onClick={copyToClipboard} className="w-full flex items-center justify-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 py-3 rounded-xl font-bold transition shadow-sm"><Copy className="w-4 h-4" /> Copiar Código Pix</button>}
-              {checkoutUrl && !useIframe && <a href={checkoutUrl} target="_blank" rel="noopener noreferrer" className="w-full flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 py-3 rounded-xl font-bold transition border border-blue-200"><ExternalLink className="w-4 h-4" /> Abrir Link de Pagamento</a>}
+              {copyPasteCode && (
+                <button 
+                  onClick={copyToClipboard}
+                  className="w-full flex items-center justify-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 py-3 rounded-xl font-bold transition shadow-sm"
+                >
+                  <Copy className="w-4 h-4" /> Copiar Código Pix
+                </button>
+              )}
+
+              {/* Botão de abrir no banco sempre útil como backup */}
+              {checkoutUrl && !useIframe && (
+                <a 
+                  href={checkoutUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 py-3 rounded-xl font-bold transition border border-blue-200"
+                >
+                  <ExternalLink className="w-4 h-4" /> Abrir Link de Pagamento
+                </a>
+              )}
             </div>
+            
           </div>
         </div>
       </div>
     );
   };
 
-  // ✅ NOVA PÁGINA: MEUS PEDIDOS
+  // ✅ TRANSFORMEI EM COMPONENTE FUNCIONAL PARA EVITAR ERROS
+  const MenuPage = () => (
+    <div className="pb-32">
+      {/* Hero Section / Loyalty */}
+      {user ? (
+        <div className="px-4 mt-6">
+          <LoyaltyCard />
+        </div>
+      ) : (
+        <div className="relative mx-4 mt-6 mb-8 rounded-3xl overflow-hidden shadow-2xl shadow-amber-900/10 bg-gradient-to-br from-amber-600 via-amber-700 to-amber-900 text-white p-8">
+          <div className="relative z-10 max-w-lg">
+            <div className="inline-block px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold mb-3 border border-white/20">Doce É Ser</div>
+            <h2 className="text-3xl md:text-4xl font-extrabold mb-3 leading-tight">O doce equilíbrio <br/>que o seu dia precisa. 🍰</h2>
+            <p className="text-amber-100 mb-6 text-sm md:text-base opacity-90 leading-relaxed">Crie sua conta para ganhar brindes exclusivos!</p>
+            <div className="flex gap-3">
+              <button onClick={() => setAuthModalOpen(true)} className="bg-white text-amber-800 px-6 py-2.5 rounded-full font-bold text-sm shadow-lg hover:bg-gray-50 transition active:scale-95">
+                Criar Conta / Entrar
+              </button>
+            </div>
+          </div>
+          {/* Decorative Elements */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2"></div>
+          <div className="absolute right-[-20px] bottom-[-40px] opacity-20 rotate-12">
+             <Cake className="w-64 h-64 text-white" />
+          </div>
+        </div>
+      )}
+
+      {/* Categorias Sticky */}
+      <div className="sticky top-[72px] z-30 bg-gray-50/95 backdrop-blur-md py-4 border-b border-gray-200/50 mb-6">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar items-center">
+            {Object.entries(categories).map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setCategoryFilter(key)}
+                className={`px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all duration-200 border ${
+                  categoryFilter === key 
+                  ? 'bg-amber-700 text-white shadow-md shadow-amber-700/20 border-amber-700 transform scale-105' 
+                  : 'bg-white text-gray-500 border-gray-200 hover:border-amber-300 hover:text-amber-700'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Lista de Produtos */}
+      <div className="max-w-4xl mx-auto px-4">
+        <div className="flex items-center justify-between mb-6">
+           <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+             <Utensils className="w-5 h-5 text-amber-600"/> 
+             {categories[categoryFilter]}
+           </h3>
+           <span className="text-xs font-medium text-gray-400">
+             {initialProducts.filter(p => categoryFilter === 'all' || p.category === categoryFilter).length} itens
+           </span>
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {initialProducts
+            .filter(p => categoryFilter === 'all' || p.category === categoryFilter)
+            .map(p => <ProductCard key={p.id} product={p} />)
+          }
+        </div>
+      </div>
+    </div>
+  );
+
+  // ✅ TRANSFORMEI EM COMPONENTE FUNCIONAL PARA EVITAR ERROS
+  const CartPage = () => (
+    <div className="p-4 pb-32 max-w-2xl mx-auto">
+      <div className="flex items-center gap-3 mb-8">
+        <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600">
+          <ShoppingCart className="w-5 h-5" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-800">Seu Carrinho</h2>
+      </div>
+      
+      {cart.length === 0 ? (
+        <div className="bg-white rounded-3xl p-10 text-center shadow-sm border border-gray-100">
+          <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-300">
+            <Cake className="w-10 h-10" />
+          </div>
+          <h3 className="text-lg font-bold text-gray-800 mb-2">Sua sacola está vazia</h3>
+          <p className="text-gray-500 mb-8 max-w-xs mx-auto">Que tal adicionar alguns doces para deixar seu dia mais feliz?</p>
+          <button onClick={() => setPage('menu')} className="bg-amber-600 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-amber-600/20 hover:bg-amber-700 transition">
+            Ver Cardápio
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Itens */}
+          <div className="space-y-4">
+            {cart.map((item, idx) => (
+              <div key={idx} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex gap-4 transition-all hover:shadow-md">
+                <div className="w-20 h-20 bg-gray-100 rounded-xl flex-shrink-0 overflow-hidden">
+                  <img src={item.imageUrl} className="w-full h-full object-cover" alt="" />
+                </div>
+                <div className="flex-grow flex flex-col justify-between">
+                  <div>
+                    <div className="flex justify-between items-start">
+                      <h4 className="font-bold text-gray-800 leading-tight pr-4">{item.name}</h4>
+                      <button onClick={() => removeFromCart(item.uniqueId || item.id)} className="text-gray-300 hover:text-red-500 transition"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                    {item.toppings && item.toppings.length > 0 && (
+                      <p className="text-xs text-gray-500 mt-1 line-clamp-1">+ {item.toppings.join(', ')}</p>
+                    )}
+                  </div>
+                  <div className="flex justify-between items-end mt-2">
+                    <p className="text-amber-700 font-extrabold">{formatBR(item.price * item.quantity)}</p>
+                    <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-1 border border-gray-200">
+                      <button onClick={() => item.quantity > 1 ? addToCart(item, -1) : removeFromCart(item.uniqueId || item.id)} className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-amber-700 hover:bg-white rounded transition"><Minus className="w-3 h-3"/></button>
+                      <span className="text-sm font-bold w-4 text-center text-gray-700">{item.quantity}</span>
+                      <button onClick={() => addToCart(item, 1)} className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-amber-700 hover:bg-white rounded transition"><Plus className="w-3 h-3"/></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Dados e Resumo */}
+          <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 space-y-6">
+            {!user && (
+              <div onClick={() => setAuthModalOpen(true)} className="bg-blue-50 border border-blue-200 p-4 rounded-xl flex items-center gap-3 cursor-pointer hover:bg-blue-100 transition">
+                <User className="text-blue-600 w-5 h-5" />
+                <p className="text-sm text-blue-800 font-medium">Faça login para salvar seus dados e ganhar pontos!</p>
+              </div>
+            )}
+
+            <div>
+              <h3 className="font-bold text-lg text-gray-800 mb-4 flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-amber-600"/> Entrega
+              </h3>
+              <div className="grid gap-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-400 uppercase">Seu Nome</label>
+                    <input placeholder="Ex: João Silva" className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-amber-500 focus:outline-none transition" value={customer.nome} onChange={e => setCustomer({...customer, nome: e.target.value})} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-400 uppercase">Email (Obrigatório)</label>
+                    <input type="email" placeholder="seu@email.com" className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-amber-500 focus:outline-none transition" value={customer.email} onChange={e => setCustomer({...customer, email: e.target.value})} />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-400 uppercase">Telefone</label>
+                    <input placeholder="(99) 99999-9999" className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-amber-500 focus:outline-none transition" value={customer.telefone} onChange={e => setCustomer({...customer, telefone: e.target.value})} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-400 uppercase">CPF (Obrigatório)</label>
+                    <input placeholder="000.000.000-00" className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-amber-500 focus:outline-none transition" value={customer.cpf} onChange={e => setCustomer({...customer, cpf: e.target.value})} />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-400 uppercase">Rua</label>
+                  <input placeholder="Endereço de entrega" className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-amber-500 focus:outline-none transition" value={customer.rua} onChange={e => setCustomer({...customer, rua: e.target.value})} />
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-400 uppercase">Número</label>
+                    <input placeholder="123" className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-amber-500 focus:outline-none transition" value={customer.numero} onChange={e => setCustomer({...customer, numero: e.target.value})} />
+                  </div>
+                  <div className="col-span-2 space-y-1">
+                    <label className="text-xs font-bold text-gray-400 uppercase">Bairro</label>
+                    <input placeholder="Bairro" className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-amber-500 focus:outline-none transition" value={customer.bairro} onChange={e => setCustomer({...customer, bairro: e.target.value})} />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="pt-6 border-t border-dashed border-gray-200">
+              <div className="flex justify-between text-gray-500 mb-2 text-sm"><span>Subtotal</span><span>{formatBR(cartTotal)}</span></div>
+              <div className="flex justify-between text-gray-500 mb-4 text-sm"><span>Taxa de Entrega</span><span>{formatBR(DELIVERY_FEE)}</span></div>
+              <div className="flex justify-between items-center bg-gray-50 p-4 rounded-xl">
+                 <span className="font-bold text-gray-700">Total a pagar</span>
+                 <span className="text-2xl font-black text-amber-700">{formatBR(finalTotal)}</span>
+              </div>
+            </div>
+
+            <button 
+              onClick={handleInitiatePayment} 
+              disabled={isProcessingPayment}
+              className={`w-full text-white py-4 rounded-xl font-bold text-lg shadow-lg active:scale-[0.99] flex items-center justify-center gap-2 transition ${isProcessingPayment ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 shadow-green-600/20'}`}
+            >
+              {isProcessingPayment ? <Loader2 className="w-6 h-6 animate-spin"/> : <><Truck className="w-6 h-6" /> Confirmar e Pagar</>}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   const MyOrdersPage = () => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -712,12 +1081,10 @@ export default function App() {
       if (!supabase || !phone) return;
       setLoading(true);
       try {
-        // Busca pedidos onde o telefone do cliente bate com o pesquisado
-        // Ordena do mais recente para o mais antigo
         const { data, error } = await supabase
           .from(COLLECTION_ORDERS)
           .select('*')
-          .ilike('customer->>telefone', `%${phone.replace(/\D/g, '')}%`) // Tenta achar parte do telefone
+          .ilike('customer->>telefone', `%${phone.replace(/\D/g, '')}%`)
           .order('createdAt', { ascending: false });
 
         if (error) throw error;
@@ -730,7 +1097,6 @@ export default function App() {
       }
     };
 
-    // Se usuário já logado, busca automaticamente ao abrir
     useEffect(() => {
       if (user?.phone) fetchOrders(user.phone);
     }, [user]);
@@ -750,7 +1116,6 @@ export default function App() {
           <Package className="w-6 h-6 text-amber-600" /> Meus Pedidos
         </h2>
 
-        {/* Área de Busca (Se não logado ou quiser buscar outro) */}
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 flex gap-2">
           <input 
             placeholder="Digite seu celular para buscar..." 
@@ -767,7 +1132,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* Lista de Pedidos */}
         <div className="space-y-4">
           {orders.length === 0 && !loading && (
             <div className="text-center py-10 text-gray-400">
@@ -806,23 +1170,71 @@ export default function App() {
     );
   };
 
-  // --- PÁGINAS ---
-  
-  const MenuPage = (
-    <div className="pb-32">
-      {user ? <div className="px-4 mt-6"><LoyaltyCard /></div> : (
-        <div className="relative mx-4 mt-6 mb-8 rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-amber-600 to-amber-900 text-white p-8">
-          <div className="relative z-10"><h2 className="text-3xl font-extrabold mb-3">O doce equilíbrio <br/>que o seu dia precisa.</h2><button onClick={() => setAuthModalOpen(true)} className="bg-white text-amber-800 px-6 py-2.5 rounded-full font-bold text-sm shadow-lg hover:bg-gray-50 transition active:scale-95">Entrar / Criar Conta</button></div>
+  const TrackingPage = () => {
+    useEffect(() => {
+      if (!supabase || !lastOrderId) return;
+
+      const channel = supabase.channel('tracking-order')
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: COLLECTION_ORDERS, filter: `id=eq.${lastOrderId}` },
+          (payload) => {
+            if (payload.new && payload.new.status) {
+              setOrderStatus(payload.new.status);
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }, [supabase, lastOrderId]);
+
+    const ui = STATUS_UI[orderStatus] || STATUS_UI.novo;
+    const StatusIcon = ui.icon;
+
+    return (
+      <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 text-center animate-fadeIn">
+        <div className={`w-28 h-28 ${ui.bg} rounded-full flex items-center justify-center mb-6 shadow-xl transition-all duration-500 animate-bounce-slow`}>
+          <StatusIcon className={`w-14 h-14 ${ui.color}`} />
         </div>
-      )}
-      <div className="sticky top-[72px] z-30 bg-gray-50/95 backdrop-blur-md py-4 border-b border-gray-200/50 mb-6 px-4 flex gap-3 overflow-x-auto no-scrollbar">
-        {Object.entries(categories).map(([key, label]) => <button key={key} onClick={() => setCategoryFilter(key)} className={`px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap border ${categoryFilter === key ? 'bg-amber-700 text-white' : 'bg-white text-gray-500'}`}>{label}</button>)}
+        
+        <h2 className={`text-3xl font-black text-gray-800 mb-2 transition-all`}>{ui.label}</h2>
+        <p className="text-gray-500 mb-8 max-w-sm text-lg leading-relaxed">{ui.message}</p>
+        
+        <div className="bg-white p-8 rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 w-full max-w-sm relative overflow-hidden transition-all duration-300 hover:shadow-2xl">
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-gray-100">
+            <div className={`h-full ${ui.color.replace('text-', 'bg-')} transition-all duration-1000 ${ui.bar}`}></div>
+          </div>
+
+          <div className="flex justify-between items-center mb-6 mt-2">
+             <p className="text-xs text-gray-400 uppercase font-bold tracking-widest">Status do Pedido</p>
+             <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${ui.bg} ${ui.color}`}>{orderStatus}</span>
+          </div>
+          
+          <div className="flex items-center justify-center gap-3 bg-gray-50 py-4 px-4 rounded-2xl border border-gray-100 mb-6">
+            <Clock className="w-5 h-5 text-gray-400" /> 
+            <span className="text-gray-600 font-medium">Previsão: <strong className="text-gray-800">{ETA_TEXT}</strong></span>
+          </div>
+
+          <div className="pt-6 border-t border-dashed border-gray-200 text-left">
+             <div className="flex justify-between items-center">
+               <div>
+                 <p className="text-xs text-gray-400 mb-1 font-bold uppercase">Nº do Pedido</p>
+                 <p className="font-mono text-sm font-bold text-gray-600">{lastOrderId ? lastOrderId.slice(-6).toUpperCase() : '---'}</p>
+               </div>
+               <Package className="w-8 h-8 text-gray-200" />
+             </div>
+          </div>
+        </div>
+
+        <button onClick={() => {setPage('menu'); setCart([]);}} className="mt-10 text-amber-700 font-bold hover:bg-amber-50 px-8 py-3 rounded-full transition border border-transparent hover:border-amber-100">
+          Fazer outro pedido
+        </button>
       </div>
-      <div className="max-w-4xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {initialProducts.filter(p => categoryFilter === 'all' || p.category === categoryFilter).map(p => <ProductCard key={p.id} product={p} />)}
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
@@ -834,7 +1246,6 @@ export default function App() {
           </div>
           
           <div className="flex gap-2">
-            {/* ✅ BOTÃO MEUS PEDIDOS (Visível sempre) */}
             <button 
               onClick={() => setPage('my_orders')}
               className="flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-3 py-2 rounded-xl transition shadow-sm active:scale-95"
@@ -873,10 +1284,10 @@ export default function App() {
       </header>
 
       <main className="max-w-4xl mx-auto min-h-[80vh] animate-fadeIn">
-        {page === 'menu' && MenuPage}
-        {page === 'cart' && CartPage}
+        {page === 'menu' && <MenuPage />}
+        {page === 'cart' && <CartPage />}
         {page === 'tracking' && <TrackingPage />}
-        {page === 'my_orders' && <MyOrdersPage />} {/* ✅ Nova Página Renderizada */}
+        {page === 'my_orders' && <MyOrdersPage />}
       </main>
 
       <AcaiModal /> <PaymentModal /> <AuthModal />
