@@ -4,7 +4,7 @@ import {
   ShoppingCart, Plus, Minus, X, Home, ChevronRight, Truck, MapPin,
   Loader2, Cake, Heart, Trash2, Check, Clock, Utensils, Star, Phone,
   QrCode, Copy, CreditCard, Bike, Package, User, Lock, Gift, LogOut,
-  ChevronDown, ExternalLink, Search, List
+  ChevronDown, ExternalLink, Search, List, FileText, ShieldCheck
 } from "lucide-react";
 
 /* ------------- CONFIGURAÇÕES ------------- */
@@ -234,7 +234,7 @@ export default function App() {
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentData, setPaymentData] = useState(null);
   
-  // ✅ ESTADO: Dados do cliente (inclui CPF e Email)
+  // ✅ ESTADO: Dados do cliente
   const [customer, setCustomer] = useState({ 
     nome: '', 
     telefone: '', 
@@ -284,7 +284,7 @@ export default function App() {
     }
   }, [supabase]);
 
-  // ✅ POLLING AUTOMÁTICO: Verifica status a cada 3 segundos quando o modal está aberto
+  // ✅ POLLING AUTOMÁTICO
   useEffect(() => {
     let intervalId;
 
@@ -293,34 +293,29 @@ export default function App() {
       
       intervalId = setInterval(async () => {
         try {
-          // Verifica se é URL relativa (Vercel) ou absoluta (Local)
-          // No caso do Vercel é relativo, então usamos query params se necessário ou path
           const url = CHECK_STATUS_URL.startsWith('http') 
             ? `${CHECK_STATUS_URL}/${paymentData.id}` 
-            : `${CHECK_STATUS_URL}?billingId=${paymentData.id}`; // Vercel usa query params
+            : `${CHECK_STATUS_URL}?billingId=${paymentData.id}`;
 
           const response = await fetch(url);
-          
-          // ✅ TRATAMENTO DE RESPOSTA NÃO-JSON (EVITA O CRASH NO POLLING)
           const text = await response.text();
           let data;
           try {
              data = JSON.parse(text);
           } catch(e) {
-             console.warn("Polling: Resposta não é JSON, ignorando...");
              return;
           }
           
           if (data.status === 'PAID') {
             clearInterval(intervalId);
-            setPaymentModalOpen(false); // Fecha modal
-            handleConfirmOrder(); // Salva pedido e muda tela
+            setPaymentModalOpen(false); 
+            handleConfirmOrder(); 
             alert("Pagamento Confirmado com Sucesso!");
           }
         } catch (error) {
           console.error("Erro ao verificar pagamento:", error);
         }
-      }, 3000); // 3 segundos
+      }, 3000); 
     }
 
     return () => clearInterval(intervalId);
@@ -343,7 +338,6 @@ export default function App() {
     }
   };
 
-  // --- CARRINHO ---
   const addToCart = (product, quantity = 1, toppings = []) => {
     const uniqueId = product.isCustom ? product.uniqueId : product.id;
     setCart(prev => {
@@ -461,7 +455,6 @@ export default function App() {
 
       console.log("🚀 Enviando para servidor (Vercel):", BACKEND_URL);
 
-      // ✅ ADICIONANDO TAXA DE ENTREGA COMO PRODUTO
       const productsWithDelivery = [
         ...cart,
         {
@@ -477,7 +470,7 @@ export default function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          products: productsWithDelivery, // Enviando lista com a taxa incluída
+          products: productsWithDelivery, 
           customer: {
             name: customer.nome,
             phone: formattedPhone,
@@ -488,7 +481,6 @@ export default function App() {
         })
       });
 
-      // ✅ TRATAMENTO DE RESPOSTA NÃO-JSON (EVITA O CRASH)
       const textResponse = await response.text();
       let responseData;
       try {
@@ -499,10 +491,7 @@ export default function App() {
         return null;
       }
 
-      console.log("✅ Resposta COMPLETA do Servidor:", JSON.stringify(responseData, null, 2));
-
       if (!response.ok) {
-        console.error("Erro na resposta do backend:", responseData);
         alert(`Erro na criação do Pix: ${responseData.error || "Erro desconhecido"}`);
         return null;
       }
@@ -516,21 +505,18 @@ export default function App() {
       else if (isBilling(responseData)) billingData = responseData;
 
       if (!billingData) {
-        console.error("⚠️ Estrutura inesperada. Não achei dados de pagamento (pix ou url):", responseData);
-        alert("Erro: O servidor respondeu, mas não conseguimos localizar os dados do pagamento. Veja o Console (F12).");
+        alert("Erro: O servidor respondeu, mas não conseguimos localizar os dados do pagamento.");
         return null;
       }
 
       return billingData;
 
     } catch (error) {
-      console.error("❌ Erro de conexão fatal:", error);
       alert("Erro ao conectar com o servidor. Verifique sua conexão.");
       return null;
     }
   };
 
-  // --- INICIAR PAGAMENTO ---
   const handleInitiatePayment = async () => {
     if (!customer.nome || !customer.telefone || !customer.rua || !customer.email || !customer.cpf) {
       return alert("Preencha todos os campos obrigatórios (Email, CPF, Endereço).");
@@ -554,11 +540,8 @@ export default function App() {
     setIsProcessingPayment(false);
 
     if (billing) {
-      console.log("🔓 Abrindo Modal de Pagamento com:", billing);
       setPaymentData(billing);
       setPaymentModalOpen(true);
-    } else {
-      console.log("🔒 Modal não abriu porque 'billing' veio vazio.");
     }
   };
 
@@ -574,13 +557,12 @@ export default function App() {
       items: cart,
       customer: customer, 
       paymentMethod: 'PIX',
-      paymentStatus: 'PAGO' // Já entra como PAGO
+      paymentStatus: 'PAGO'
     };
 
     const { error } = await supabase.from(COLLECTION_ORDERS).insert(payload);
     
     if (error) {
-      console.error(error);
       alert("Erro ao enviar pedido.");
     } else {
       setLastOrderId(orderId);
@@ -598,10 +580,13 @@ export default function App() {
     if (!authModalOpen) return null;
     const [isRegister, setIsRegister] = useState(false);
     const [formData, setFormData] = useState({ name: '', phone: '', password: '', confirmPassword: '' });
+    // ✅ NOVO: Estado para os termos
+    const [termsAccepted, setTermsAccepted] = useState(false);
 
     const handleSubmit = (e) => {
       e.preventDefault();
       if (isRegister) {
+        if (!termsAccepted) return alert("Você precisa aceitar as diretrizes do site.");
         if (formData.password !== formData.confirmPassword) return alert("Senhas não conferem.");
         if (formData.password.length < 4) return alert("Senha muito curta.");
         handleAuth('register', formData);
@@ -639,13 +624,33 @@ export default function App() {
               <input required type="password" className="w-full p-3 bg-gray-50 rounded-xl border focus:border-amber-500 outline-none" placeholder="******" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
             </div>
             {isRegister && (
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-500 uppercase">Confirmar Senha</label>
-                <input required type="password" className="w-full p-3 bg-gray-50 rounded-xl border focus:border-amber-500 outline-none" placeholder="******" value={formData.confirmPassword} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} />
-              </div>
+              <>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-500 uppercase">Confirmar Senha</label>
+                  <input required type="password" className="w-full p-3 bg-gray-50 rounded-xl border focus:border-amber-500 outline-none" placeholder="******" value={formData.confirmPassword} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} />
+                </div>
+                
+                {/* ✅ CHECKBOX DE DIRETRIZES */}
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                  <input 
+                    type="checkbox" 
+                    id="terms"
+                    className="w-5 h-5 text-amber-600 rounded focus:ring-amber-500 border-gray-300"
+                    checked={termsAccepted}
+                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                  />
+                  <label htmlFor="terms" className="text-xs text-gray-600 cursor-pointer select-none">
+                    Li e aceito as <span className="font-bold text-amber-700 hover:underline">diretrizes do site</span> e política de privacidade.
+                  </label>
+                </div>
+              </>
             )}
 
-            <button type="submit" className="w-full bg-amber-600 text-white py-3 rounded-xl font-bold hover:bg-amber-700 transition shadow-lg shadow-amber-600/20">
+            <button 
+              type="submit" 
+              disabled={isRegister && !termsAccepted}
+              className={`w-full text-white py-3 rounded-xl font-bold transition shadow-lg ${isRegister && !termsAccepted ? 'bg-gray-400 cursor-not-allowed' : 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/20'}`}
+            >
               {isRegister ? 'Cadastrar' : 'Entrar'}
             </button>
           </form>
@@ -660,40 +665,56 @@ export default function App() {
     );
   };
 
+  // ✅ LOYALTY CARD CORRIGIDO (Visual melhor e lógica de 0%)
   const LoyaltyCard = () => {
     const giftsEarned = Math.floor(loyaltyProgress / LOYALTY_GOAL);
     const progressCurrent = loyaltyProgress % LOYALTY_GOAL;
-    const percentage = (progressCurrent / LOYALTY_GOAL) * 100;
+    // Evita NaN ou divisão por zero
+    const percentage = LOYALTY_GOAL > 0 ? (progressCurrent / LOYALTY_GOAL) * 100 : 0;
 
     return (
-      <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 text-white shadow-xl shadow-indigo-200 mb-8 relative overflow-hidden">
+      <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 text-white shadow-xl shadow-indigo-200 mb-8 relative overflow-hidden transform transition hover:scale-[1.01] duration-300">
         <div className="absolute top-0 right-0 opacity-10"><Gift className="w-48 h-48 -mr-10 -mt-10" /></div>
         
         <div className="relative z-10">
           <div className="flex justify-between items-start mb-4">
             <div>
               <h3 className="text-xl font-bold flex items-center gap-2"><Star className="w-5 h-5 text-yellow-300 fill-current"/> Clube Doce Fidelidade</h3>
-              <p className="text-indigo-100 text-sm">Peça {LOYALTY_GOAL} vezes e ganhe um brinde!</p>
+              <p className="text-indigo-100 text-sm">A cada {LOYALTY_GOAL} pedidos, ganhe um brinde!</p>
             </div>
-            <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold border border-white/30">
+            <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold border border-white/30 whitespace-nowrap">
               {loyaltyProgress} Pedidos Totais
             </div>
           </div>
 
-          <div className="bg-black/20 rounded-full h-4 w-full mb-2 overflow-hidden border border-white/10">
-            <div className="bg-gradient-to-r from-yellow-300 to-amber-500 h-full transition-all duration-1000" style={{ width: `${percentage}%` }}></div>
+          <div className="relative pt-1">
+             <div className="flex mb-2 items-center justify-between">
+                <div>
+                  <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-indigo-600 bg-indigo-200">
+                    Progresso Atual
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs font-semibold inline-block text-indigo-200">
+                    {Math.round(percentage)}%
+                  </span>
+                </div>
+             </div>
+             <div className="overflow-hidden h-4 mb-4 text-xs flex rounded-full bg-indigo-900/30 border border-white/10">
+                <div style={{ width: `${percentage}%` }} className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-gradient-to-r from-yellow-300 to-amber-500 transition-all duration-1000 ease-out"></div>
+             </div>
           </div>
           
-          <div className="flex justify-between text-xs font-bold text-indigo-100 mb-4">
+          <div className="flex justify-between text-xs font-bold text-indigo-100 mb-2">
             <span>0</span>
             <span>{LOYALTY_GOAL} Pedidos</span>
           </div>
 
           {giftsEarned > 0 && (
-            <div className="bg-white text-indigo-900 p-3 rounded-xl flex items-center gap-3 shadow-lg animate-pulse">
+            <div className="bg-white text-indigo-900 p-3 rounded-xl flex items-center gap-3 shadow-lg animate-pulse border border-white/50">
               <Gift className="w-6 h-6 text-purple-600" />
               <div>
-                <p className="font-bold leading-tight">Você tem {giftsEarned} brinde(s) disponível(is)!</p>
+                <p className="font-bold leading-tight">Parabéns! Você tem {giftsEarned} brinde(s).</p>
                 <p className="text-xs text-indigo-700">Solicite na observação do próximo pedido.</p>
               </div>
             </div>
@@ -909,7 +930,8 @@ export default function App() {
     );
   };
 
-  // ✅ TRANSFORMEI EM COMPONENTE FUNCIONAL PARA EVITAR ERROS
+  // --- PÁGINAS ---
+  
   const MenuPage = () => (
     <div className="pb-32">
       {/* Hero Section / Loyalty */}
@@ -918,7 +940,7 @@ export default function App() {
           <LoyaltyCard />
         </div>
       ) : (
-        <div className="relative mx-4 mt-6 mb-8 rounded-3xl overflow-hidden shadow-2xl shadow-amber-900/10 bg-gradient-to-br from-amber-600 via-amber-700 to-amber-900 text-white p-8">
+        <div className="relative mx-4 mt-6 mb-8 rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-amber-600 to-amber-900 text-white p-8">
           <div className="relative z-10 max-w-lg">
             <div className="inline-block px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold mb-3 border border-white/20">Doce É Ser</div>
             <h2 className="text-3xl md:text-4xl font-extrabold mb-3 leading-tight">O doce equilíbrio <br/>que o seu dia precisa. 🍰</h2>
@@ -1035,73 +1057,86 @@ export default function App() {
 
           {/* Dados e Resumo */}
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 space-y-6">
-            {!user && (
-              <div onClick={() => setAuthModalOpen(true)} className="bg-blue-50 border border-blue-200 p-4 rounded-xl flex items-center gap-3 cursor-pointer hover:bg-blue-100 transition">
-                <User className="text-blue-600 w-5 h-5" />
-                <p className="text-sm text-blue-800 font-medium">Faça login para salvar seus dados e ganhar pontos!</p>
+            {!user ? (
+               // ✅ LOGIN OBRIGATÓRIO (MOSTRA AVISO SE NÃO LOGADO)
+              <div className="text-center py-8">
+                <div className="bg-amber-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                  <Lock className="w-8 h-8 text-amber-600" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-800 mb-2">Faça login para continuar</h3>
+                <p className="text-gray-500 mb-6 text-sm">Precisamos do seu cadastro para processar o pedido e a entrega.</p>
+                <button 
+                  onClick={() => setAuthModalOpen(true)} 
+                  className="bg-amber-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-amber-700 transition w-full"
+                >
+                  Entrar ou Cadastrar
+                </button>
               </div>
-            )}
+            ) : (
+              // ✅ FORMULÁRIO DE CHECKOUT (APENAS SE LOGADO)
+              <>
+                <div>
+                  <h3 className="font-bold text-lg text-gray-800 mb-4 flex items-center gap-2">
+                    <MapPin className="w-5 h-5 text-amber-600"/> Entrega
+                  </h3>
+                  <div className="grid gap-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-400 uppercase">Seu Nome</label>
+                        <input placeholder="Ex: João Silva" className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-amber-500 focus:outline-none transition" value={customer.nome} onChange={e => setCustomer({...customer, nome: e.target.value})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-400 uppercase">Email (Obrigatório)</label>
+                        <input type="email" placeholder="seu@email.com" className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-amber-500 focus:outline-none transition" value={customer.email} onChange={e => setCustomer({...customer, email: e.target.value})} />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-400 uppercase">Telefone</label>
+                        <input placeholder="(99) 99999-9999" className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-amber-500 focus:outline-none transition" value={customer.telefone} onChange={e => setCustomer({...customer, telefone: e.target.value})} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-400 uppercase">CPF (Obrigatório)</label>
+                        <input placeholder="000.000.000-00" className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-amber-500 focus:outline-none transition" value={customer.cpf} onChange={e => setCustomer({...customer, cpf: e.target.value})} />
+                      </div>
+                    </div>
 
-            <div>
-              <h3 className="font-bold text-lg text-gray-800 mb-4 flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-amber-600"/> Entrega
-              </h3>
-              <div className="grid gap-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-400 uppercase">Seu Nome</label>
-                    <input placeholder="Ex: João Silva" className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-amber-500 focus:outline-none transition" value={customer.nome} onChange={e => setCustomer({...customer, nome: e.target.value})} />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-400 uppercase">Email (Obrigatório)</label>
-                    <input type="email" placeholder="seu@email.com" className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-amber-500 focus:outline-none transition" value={customer.email} onChange={e => setCustomer({...customer, email: e.target.value})} />
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-400 uppercase">Rua</label>
+                      <input placeholder="Endereço de entrega" className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-amber-500 focus:outline-none transition" value={customer.rua} onChange={e => setCustomer({...customer, rua: e.target.value})} />
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-400 uppercase">Número</label>
+                        <input placeholder="123" className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-amber-500 focus:outline-none transition" value={customer.numero} onChange={e => setCustomer({...customer, numero: e.target.value})} />
+                      </div>
+                      <div className="col-span-2 space-y-1">
+                        <label className="text-xs font-bold text-gray-400 uppercase">Bairro</label>
+                        <input placeholder="Bairro" className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-amber-500 focus:outline-none transition" value={customer.bairro} onChange={e => setCustomer({...customer, bairro: e.target.value})} />
+                      </div>
+                    </div>
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-400 uppercase">Telefone</label>
-                    <input placeholder="(99) 99999-9999" className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-amber-500 focus:outline-none transition" value={customer.telefone} onChange={e => setCustomer({...customer, telefone: e.target.value})} />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-400 uppercase">CPF (Obrigatório)</label>
-                    <input placeholder="000.000.000-00" className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-amber-500 focus:outline-none transition" value={customer.cpf} onChange={e => setCustomer({...customer, cpf: e.target.value})} />
+                <div className="pt-6 border-t border-dashed border-gray-200">
+                  <div className="flex justify-between text-gray-500 mb-2 text-sm"><span>Subtotal</span><span>{formatBR(cartTotal)}</span></div>
+                  <div className="flex justify-between text-gray-500 mb-4 text-sm"><span>Taxa de Entrega</span><span>{formatBR(DELIVERY_FEE)}</span></div>
+                  <div className="flex justify-between items-center bg-gray-50 p-4 rounded-xl">
+                     <span className="font-bold text-gray-700">Total a pagar</span>
+                     <span className="text-2xl font-black text-amber-700">{formatBR(finalTotal)}</span>
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-400 uppercase">Rua</label>
-                  <input placeholder="Endereço de entrega" className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-amber-500 focus:outline-none transition" value={customer.rua} onChange={e => setCustomer({...customer, rua: e.target.value})} />
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-400 uppercase">Número</label>
-                    <input placeholder="123" className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-amber-500 focus:outline-none transition" value={customer.numero} onChange={e => setCustomer({...customer, numero: e.target.value})} />
-                  </div>
-                  <div className="col-span-2 space-y-1">
-                    <label className="text-xs font-bold text-gray-400 uppercase">Bairro</label>
-                    <input placeholder="Bairro" className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:border-amber-500 focus:outline-none transition" value={customer.bairro} onChange={e => setCustomer({...customer, bairro: e.target.value})} />
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="pt-6 border-t border-dashed border-gray-200">
-              <div className="flex justify-between text-gray-500 mb-2 text-sm"><span>Subtotal</span><span>{formatBR(cartTotal)}</span></div>
-              <div className="flex justify-between text-gray-500 mb-4 text-sm"><span>Taxa de Entrega</span><span>{formatBR(DELIVERY_FEE)}</span></div>
-              <div className="flex justify-between items-center bg-gray-50 p-4 rounded-xl">
-                 <span className="font-bold text-gray-700">Total a pagar</span>
-                 <span className="text-2xl font-black text-amber-700">{formatBR(finalTotal)}</span>
-              </div>
-            </div>
-
-            <button 
-              onClick={handleInitiatePayment} 
-              disabled={isProcessingPayment}
-              className={`w-full text-white py-4 rounded-xl font-bold text-lg shadow-lg active:scale-[0.99] flex items-center justify-center gap-2 transition ${isProcessingPayment ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 shadow-green-600/20'}`}
-            >
-              {isProcessingPayment ? <Loader2 className="w-6 h-6 animate-spin"/> : <><Truck className="w-6 h-6" /> Confirmar e Pagar</>}
-            </button>
+                <button 
+                  onClick={handleInitiatePayment} 
+                  disabled={isProcessingPayment}
+                  className={`w-full text-white py-4 rounded-xl font-bold text-lg shadow-lg active:scale-[0.99] flex items-center justify-center gap-2 transition ${isProcessingPayment ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 shadow-green-600/20'}`}
+                >
+                  {isProcessingPayment ? <Loader2 className="w-6 h-6 animate-spin"/> : <><Truck className="w-6 h-6" /> Confirmar e Pagar</>}
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -1277,8 +1312,17 @@ export default function App() {
       <header className="sticky top-0 bg-white/90 backdrop-blur-lg shadow-sm z-40 px-4 py-3 border-b border-gray-100">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setPage('menu')}>
-            <img src={LOGO_URL} className="h-10 w-auto rounded-lg transition group-hover:scale-105" />
-            <h1 className="font-bold text-lg hidden xs:block">Doce É Ser</h1>
+            {/* Logo Minimalista */}
+            <img 
+                src={LOGO_URL} 
+                alt="Doce É Ser" 
+                className="h-10 w-auto object-contain rounded-lg transition-transform group-hover:scale-105" 
+            />
+            {/* Nome da Loja ao lado da Logo */}
+            <div>
+              {/* ✅ REMOVIDA CLASSE 'hidden xs:block' PARA APARECER SEMPRE */}
+              <h1 className="font-bold text-lg text-gray-800">Doce É Ser</h1>
+            </div>
           </div>
           
           <div className="flex gap-2">
