@@ -1,21 +1,35 @@
-const express = require('express');
-const cors = require('cors');
-const app = express();
+// api/create-payment.js
 
-app.use(cors());
-app.use(express.json());
-
+// ⚠️ SUA CHAVE DE PRODUÇÃO
 const ABACATE_API_KEY = "abc_prod_UjhbqsQL1PSR3TEbsJWWQy4n";
 
-// Rota para Criar Cobrança
-app.post('/create-payment', async (req, res) => {
+module.exports = async (req, res) => {
+  // Configuração de CORS
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
+
   try {
     const { products, customer, returnUrl } = req.body;
-    console.log("💰 Criando Pix para:", customer.name);
 
-    if (!customer.email || !customer.cpf) {
-      return res.status(400).json({ error: "Email e CPF obrigatórios" });
+    if (!customer || !customer.email || !customer.cpf) {
+      return res.status(400).json({ error: "Email e CPF são obrigatórios." });
     }
+
+    const cleanTaxId = customer.cpf.replace(/\D/g, '');
 
     const payload = {
       frequency: "ONE_TIME",
@@ -23,6 +37,7 @@ app.post('/create-payment', async (req, res) => {
       products: products.map((item) => ({
         externalId: String(item.uniqueId || item.id),
         name: item.name,
+        description: item.description || "Doce É Ser",
         quantity: item.quantity,
         price: Math.round(item.price * 100)
       })),
@@ -32,10 +47,11 @@ app.post('/create-payment', async (req, res) => {
         name: customer.name,
         cellphone: customer.phone,
         email: customer.email,
-        taxId: customer.cpf.replace(/\D/g, '')
+        taxId: cleanTaxId
       }
     };
 
+    // A Vercel (Node 18+) suporta fetch nativo.
     const response = await fetch("https://api.abacatepay.com/v1/billing/create", {
       method: "POST",
       headers: {
@@ -46,48 +62,15 @@ app.post('/create-payment', async (req, res) => {
     });
 
     const data = await response.json();
-    if (!response.ok) return res.status(400).json(data);
-    
-    res.json(data);
 
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Erro interno" });
-  }
-});
-
-// ✅ NOVA ROTA: Verificar Status do Pagamento
-app.get('/check-status/:billingId', async (req, res) => {
-  try {
-    const { billingId } = req.params;
-    
-    // A AbacatePay permite listar e filtrar por ID
-    const response = await fetch(`https://api.abacatepay.com/v1/billing/list?id=${billingId}`, {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${ABACATE_API_KEY}`,
-        "Content-Type": "application/json"
-      }
-    });
-
-    const data = await response.json();
-    
-    // Procura a cobrança específica na lista retornada
-    const bill = data.data?.find(b => b.id === billingId);
-
-    if (bill) {
-      console.log(`🔍 Status do pedido ${billingId}: ${bill.status}`);
-      res.json({ status: bill.status }); // Retorna 'PENDING', 'PAID', etc.
-    } else {
-      res.status(404).json({ status: 'UNKNOWN' });
+    if (!response.ok) {
+      return res.status(400).json({ error: data.error?.message || "Erro na API AbacatePay" });
     }
 
-  } catch (error) {
-    console.error("Erro ao checar status:", error);
-    res.status(500).json({ error: "Erro ao verificar status" });
-  }
-});
+    return res.status(200).json(data);
 
-app.listen(3001, () => {
-  console.log('🚀 Servidor rodando em http://localhost:3001');
-});
+  } catch (error) {
+    console.error("Erro interno:", error);
+    return res.status(500).json({ error: "Erro interno no servidor Vercel: " + error.message });
+  }
+};
