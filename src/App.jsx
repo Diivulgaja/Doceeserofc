@@ -158,30 +158,50 @@ const AuthModal = ({ isOpen, onClose, onAuth, onOpenTerms }) => {
 
 const PaymentModal = ({ isOpen, onClose, data, onConfirm }) => {
   if (!isOpen || !data) return null;
+
+  // Se data.data.billing existir, usa ele, senão usa data direto (flexibilidade)
+  const billing = data.data?.billing || data.billing || data; 
+  
+  // URL do pagamento (se a API retornar link direto)
+  const paymentUrl = billing.url;
+
   const copyToClipboard = () => {
-    if (data.pix?.copypaste) {
-      navigator.clipboard.writeText(data.pix.copypaste);
-      alert("Código Pix copiado!");
+    // Tenta pegar o código pix se existir
+    // Como a API retorna billing.url e billing.id, mas não necessariamente o "copia e cola" pix direto no objeto principal sem chamar outra rota de detalhes
+    // Vamos verificar se existe um campo específico ou usar a URL como fallback para o botão "Pagar"
+    const pixCode = billing.pix?.copypaste || billing.url; // Fallback para URL se não tiver copypaste
+    if (pixCode) {
+      navigator.clipboard.writeText(pixCode);
+      alert("Código/Link copiado! Se for um link, cole no navegador.");
+    } else {
+        alert("Erro ao copiar código. Tente abrir o link abaixo.");
     }
   };
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fadeIn">
       <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl scale-100 animate-slideUp">
         <div className="bg-green-600 p-6 text-center text-white">
            <CreditCard className="w-12 h-12 mx-auto mb-3 opacity-90" />
-           <h3 className="text-2xl font-bold">Pagamento via Pix</h3>
-           <p className="text-green-100 text-sm">Escaneie ou copie o código</p>
+           <h3 className="text-2xl font-bold">Pagamento Criado</h3>
+           <p className="text-green-100 text-sm">Finalize o pagamento para confirmar</p>
         </div>
         <div className="p-8 flex flex-col items-center">
           <div className="w-48 h-48 bg-gray-100 rounded-xl flex items-center justify-center mb-6 border-2 border-dashed border-gray-300 overflow-hidden relative group">
+             {/* Como não temos o QR Code image direto, mostramos um ícone ou link */}
              <div className="absolute inset-0 flex flex-col items-center justify-center bg-white opacity-0 group-hover:opacity-10 text-xs font-bold text-gray-500">QR Code</div>
-             <div className="z-10 bg-white p-2 rounded-lg shadow-sm flex items-center justify-center w-full h-full">
-                <QrCode className="w-32 h-32 text-gray-800" />
+             <div className="z-10 bg-white p-2 rounded-lg shadow-sm flex items-center justify-center w-full h-full text-center p-4">
+                {paymentUrl ? <a href={paymentUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline break-all">Clique para abrir pagamento</a> : <QrCode className="w-32 h-32 text-gray-800" />}
              </div>
           </div>
-          <p className="text-2xl font-black text-gray-800 mb-6 text-center mt-4">Valor: {formatBR(data.amount ? data.amount / 100 : 0)}</p>
+          <p className="text-2xl font-black text-gray-800 mb-6 text-center mt-4">Valor: {formatBR(billing.amount ? billing.amount / 100 : 0)}</p>
           <div className="w-full space-y-3">
-            <button onClick={copyToClipboard} className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl font-bold transition border border-gray-200"><Copy className="w-4 h-4" /> Copiar Código</button>
+             {/* Se tiver URL de pagamento, oferece botão para abrir */}
+             {paymentUrl && (
+                <a href={paymentUrl} target="_blank" rel="noreferrer" className="block w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-center transition">
+                    Abrir Pagamento
+                </a>
+             )}
             <button onClick={onConfirm} className="w-full bg-green-600 hover:bg-green-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-green-600/20">Já fiz o pagamento!</button>
           </div>
           <button onClick={onClose} className="mt-4 text-xs text-gray-400 hover:text-gray-600 underline">Cancelar</button>
@@ -430,7 +450,6 @@ export default function App() {
   const handleInitiatePayment = async () => {
     if (!customer.nome || !customer.email || !customer.telefone || !customer.rua || !customer.cpf) return showToast("Preencha todos os dados.", 'error');
     
-    // Atualiza endereço do usuário
     if (user && supabase) {
        const userId = `user_${user.phone.replace(/\D/g, '')}`;
        const updated = { ...user, email: customer.email, cpf: customer.cpf, address: { rua: customer.rua, numero: customer.numero, bairro: customer.bairro } };
@@ -440,10 +459,8 @@ export default function App() {
     }
 
     setIsProcessingPayment(true);
-    // Chamada ao Backend Proxy (CORS-Free)
+    
     try {
-      // Usando corsproxy para contornar bloqueio no frontend (SOLUÇÃO TEMPORÁRIA P/ TESTE)
-      // Em produção real use seu próprio backend.
       const response = await fetch("https://corsproxy.io/?https://api.abacatepay.com/v1/billing/create", {
         method: "POST",
         headers: { "Authorization": `Bearer ${ABACATE_API_KEY}`, "Content-Type": "application/json" },
@@ -455,7 +472,10 @@ export default function App() {
         })
       });
       const data = await response.json();
-      const billing = data.data?.billing || data.billing; // Tenta achar o billing
+      
+      // Flexibilidade para pegar o objeto de cobrança em diferentes estruturas
+      const billing = data.data?.billing || data.billing || (data.pix ? data : null);
+
       if (billing && billing.pix) {
         setPaymentData(billing);
         setPaymentModalOpen(true);
