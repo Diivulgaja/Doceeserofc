@@ -35,7 +35,7 @@ const ACAI_ID = 18;
 const ACAI_BASE_PRICE = 17.90;
 
 const initialProducts = [
-  { id: 9, name: "Red velvet com Ninho e Morangos", price: 15.90, category: 'bolos', description: "Massa aveludada e macia, coberta com creme de leite Ninho cremoso.", imageUrl: "https://i.imgur.com/3UDWhLR.png" },
+  { id: 9, name: "Reb velvet com Ninho e Morangos", price: 15.90, category: 'bolos', description: "Massa aveludada e macia, coberta com creme de leite Ninho cremoso.", imageUrl: "https://i.imgur.com/3UDWhLR.png" },
   { id: 2, name: "Bolo Cenoura com chocolate", price: 15.90, category: 'bolos', description: "Mini vulcão de cenoura com explosão de chocolate.", imageUrl: "https://i.imgur.com/aaUdL2b.png" },
   { id: 10, name: "Chocolate com Morangos", price: 15.90, category: 'bolos', description: "Bolo fofinho de chocolate com morangos.", imageUrl: "https://i.imgur.com/MMbQohl.png" },
   { id: 13, name: "Chocolatudo!!!", price: 15.90, category: 'bolos', description: "Bolo com muito chocolate.", imageUrl: "https://i.imgur.com/3Hva4Df.png" },
@@ -159,22 +159,23 @@ const AuthModal = ({ isOpen, onClose, onAuth, onOpenTerms }) => {
 const PaymentModal = ({ isOpen, onClose, data, onConfirm }) => {
   if (!isOpen || !data) return null;
 
-  // Se data.data.billing existir, usa ele, senão usa data direto (flexibilidade)
+  // CORREÇÃO AQUI: Adapta a leitura da resposta da AbacatePay
+  // A API pode retornar o billing dentro de data.data.billing OU data.data (depende do wrapper)
+  // Baseado no log do erro: {"error":null,"data":{ "url": "...", "id": "..." }} 
+  // O objeto de billing é o próprio data.data
   const billing = data.data?.billing || data.billing || data; 
   
-  // URL do pagamento (se a API retornar link direto)
+  // URL do pagamento
   const paymentUrl = billing.url;
 
   const copyToClipboard = () => {
-    // Tenta pegar o código pix se existir
-    // Como a API retorna billing.url e billing.id, mas não necessariamente o "copia e cola" pix direto no objeto principal sem chamar outra rota de detalhes
-    // Vamos verificar se existe um campo específico ou usar a URL como fallback para o botão "Pagar"
-    const pixCode = billing.pix?.copypaste || billing.url; // Fallback para URL se não tiver copypaste
+    // Tenta pegar o código pix se existir (copypaste), senão usa a URL
+    const pixCode = billing.pix?.copypaste || paymentUrl;
     if (pixCode) {
       navigator.clipboard.writeText(pixCode);
-      alert("Código/Link copiado! Se for um link, cole no navegador.");
+      alert("Copiado! Se for um link, cole no navegador.");
     } else {
-        alert("Erro ao copiar código. Tente abrir o link abaixo.");
+        alert("Erro ao copiar. Tente abrir o link.");
     }
   };
 
@@ -188,20 +189,25 @@ const PaymentModal = ({ isOpen, onClose, data, onConfirm }) => {
         </div>
         <div className="p-8 flex flex-col items-center">
           <div className="w-48 h-48 bg-gray-100 rounded-xl flex items-center justify-center mb-6 border-2 border-dashed border-gray-300 overflow-hidden relative group">
-             {/* Como não temos o QR Code image direto, mostramos um ícone ou link */}
              <div className="absolute inset-0 flex flex-col items-center justify-center bg-white opacity-0 group-hover:opacity-10 text-xs font-bold text-gray-500">QR Code</div>
              <div className="z-10 bg-white p-2 rounded-lg shadow-sm flex items-center justify-center w-full h-full text-center p-4">
-                {paymentUrl ? <a href={paymentUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline break-all">Clique para abrir pagamento</a> : <QrCode className="w-32 h-32 text-gray-800" />}
+                {/* Se não tiver imagem do QR code, mostra ícone e link */}
+                {paymentUrl ? (
+                    <a href={paymentUrl} target="_blank" rel="noreferrer" className="flex flex-col items-center gap-2 text-blue-600 hover:text-blue-800">
+                        <QrCode className="w-16 h-16" />
+                        <span className="text-xs underline font-bold">Abrir Pagamento</span>
+                    </a>
+                ) : <QrCode className="w-32 h-32 text-gray-800" />}
              </div>
           </div>
           <p className="text-2xl font-black text-gray-800 mb-6 text-center mt-4">Valor: {formatBR(billing.amount ? billing.amount / 100 : 0)}</p>
           <div className="w-full space-y-3">
-             {/* Se tiver URL de pagamento, oferece botão para abrir */}
              {paymentUrl && (
-                <a href={paymentUrl} target="_blank" rel="noreferrer" className="block w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-center transition">
-                    Abrir Pagamento
+                <a href={paymentUrl} target="_blank" rel="noreferrer" className="block w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold text-center transition shadow-md">
+                    Pagar Agora (Abrir Link)
                 </a>
              )}
+            <button onClick={copyToClipboard} className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl font-bold transition border border-gray-200"><Copy className="w-4 h-4" /> Copiar Código/Link</button>
             <button onClick={onConfirm} className="w-full bg-green-600 hover:bg-green-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-green-600/20">Já fiz o pagamento!</button>
           </div>
           <button onClick={onClose} className="mt-4 text-xs text-gray-400 hover:text-gray-600 underline">Cancelar</button>
@@ -450,6 +456,7 @@ export default function App() {
   const handleInitiatePayment = async () => {
     if (!customer.nome || !customer.email || !customer.telefone || !customer.rua || !customer.cpf) return showToast("Preencha todos os dados.", 'error');
     
+    // Atualiza endereço do usuário
     if (user && supabase) {
        const userId = `user_${user.phone.replace(/\D/g, '')}`;
        const updated = { ...user, email: customer.email, cpf: customer.cpf, address: { rua: customer.rua, numero: customer.numero, bairro: customer.bairro } };
@@ -459,8 +466,10 @@ export default function App() {
     }
 
     setIsProcessingPayment(true);
-    
+    // Chamada ao Backend Proxy (CORS-Free)
     try {
+      // Usando corsproxy para contornar bloqueio no frontend (SOLUÇÃO TEMPORÁRIA P/ TESTE)
+      // Em produção real use seu próprio backend.
       const response = await fetch("https://corsproxy.io/?https://api.abacatepay.com/v1/billing/create", {
         method: "POST",
         headers: { "Authorization": `Bearer ${ABACATE_API_KEY}`, "Content-Type": "application/json" },
@@ -474,9 +483,9 @@ export default function App() {
       const data = await response.json();
       
       // Flexibilidade para pegar o objeto de cobrança em diferentes estruturas
-      const billing = data.data?.billing || data.billing || (data.pix ? data : null);
+      const billing = data.data?.billing || data.billing || (data.data?.url ? data.data : null);
 
-      if (billing && billing.pix) {
+      if (billing && (billing.pix || billing.url)) {
         setPaymentData(billing);
         setPaymentModalOpen(true);
       } else { throw new Error(JSON.stringify(data)); }
